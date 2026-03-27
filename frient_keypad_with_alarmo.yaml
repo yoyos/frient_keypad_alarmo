@@ -30,13 +30,13 @@ blueprint:
           description:
             "State Topic for the second keypad (leave empty to disable).\n
             Example: zigbee2mqtt/Keypad2"
-          default: ""
+          default: "_disabled_keypad2_"
         z2m_keypad_path_set2:
           name: MQTT Set Topic of your second Zigbee2MQTT Keypad (Optional)
           description:
             "Set Topic for the second keypad (leave empty to disable).\n
             Example: zigbee2mqtt/Keypad2/set"
-          default: ""
+          default: "_disabled_keypad2_set_"
         allow_arm_without_code:
           name: Allow Arming Without Code
           description:
@@ -197,7 +197,7 @@ variables:
     {{ [custom_pincode_1, custom_pincode_2, custom_pincode_3] }}
   z2m_keypad_path2_var: !input z2m_keypad_path2
   z2m_keypad_path_set2_var: !input z2m_keypad_path_set2
-  keypad2_enabled: "{{ z2m_keypad_path2_var | string | length > 0 and z2m_keypad_path_set2_var | string | length > 0 }}"
+  keypad2_enabled: "{{ not z2m_keypad_path2_var.startswith('_disabled_') and z2m_keypad_path2_var | length > 0 }}"
 triggers:
   - trigger: state
     entity_id: !input control_panel
@@ -230,13 +230,9 @@ triggers:
   - trigger: mqtt
     topic: !input z2m_keypad_path
     id: keypad_mqtt
-  - trigger: template
-    value_template: "{{ keypad2_enabled }}"
-    enabled: false
   - trigger: mqtt
     topic: !input z2m_keypad_path2
     id: keypad_mqtt_2
-    enabled: "{{ keypad2_enabled }}"
 condition: []
 actions:
   - choose:
