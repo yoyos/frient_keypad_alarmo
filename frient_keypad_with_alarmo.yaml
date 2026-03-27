@@ -25,6 +25,18 @@ blueprint:
           description:
             "This is the same as your State Topic, with the addition of /set.\n
             Example: zigbee2mqtt/Keypad/set"
+        z2m_keypad_path2:
+          name: MQTT State Topic of your second Zigbee2MQTT Keypad (Optional)
+          description:
+            "State Topic for the second keypad (leave empty to disable).\n
+            Example: zigbee2mqtt/Keypad2"
+          default: ""
+        z2m_keypad_path_set2:
+          name: MQTT Set Topic of your second Zigbee2MQTT Keypad (Optional)
+          description:
+            "Set Topic for the second keypad (leave empty to disable).\n
+            Example: zigbee2mqtt/Keypad2/set"
+          default: ""
         allow_arm_without_code:
           name: Allow Arming Without Code
           description:
@@ -183,6 +195,9 @@ variables:
   custom_pincode_3: !input custom_pincode_3
   pin_actions_list: >
     {{ [custom_pincode_1, custom_pincode_2, custom_pincode_3] }}
+  z2m_keypad_path2_var: !input z2m_keypad_path2
+  z2m_keypad_path_set2_var: !input z2m_keypad_path_set2
+  keypad2_enabled: "{{ z2m_keypad_path2_var | string | length > 0 and z2m_keypad_path_set2_var | string | length > 0 }}"
 triggers:
   - trigger: state
     entity_id: !input control_panel
@@ -215,6 +230,13 @@ triggers:
   - trigger: mqtt
     topic: !input z2m_keypad_path
     id: keypad_mqtt
+  - trigger: template
+    value_template: "{{ keypad2_enabled }}"
+    enabled: false
+  - trigger: mqtt
+    topic: !input z2m_keypad_path2
+    id: keypad_mqtt_2
+    enabled: "{{ keypad2_enabled }}"
 condition: []
 actions:
   - choose:
@@ -226,6 +248,14 @@ actions:
             data:
               topic: !input z2m_keypad_path_set
               payload: "{\n\"arm_mode\": \n  {\n  \"mode\": \"exit_delay\"\n  }\n}"
+          - if:
+              - condition: template
+                value_template: "{{ keypad2_enabled }}"
+            then:
+              - action: mqtt.publish
+                data:
+                  topic: !input z2m_keypad_path_set2
+                  payload: "{\n\"arm_mode\": \n  {\n  \"mode\": \"exit_delay\"\n  }\n}"
           - choose:
             default: !input action_arming
       - conditions:
@@ -236,6 +266,14 @@ actions:
             data:
               topic: !input z2m_keypad_path_set
               payload: "{\n \"arm_mode\": \n  {\n   \"mode\": \"arm_all_zones\"\n  }\n}"
+          - if:
+              - condition: template
+                value_template: "{{ keypad2_enabled }}"
+            then:
+              - action: mqtt.publish
+                data:
+                  topic: !input z2m_keypad_path_set2
+                  payload: "{\n \"arm_mode\": \n  {\n   \"mode\": \"arm_all_zones\"\n  }\n}"
           - choose:
             default: !input action_armed_away
       - conditions:
@@ -246,6 +284,14 @@ actions:
             data:
               topic: !input z2m_keypad_path_set
               payload: "{\n \"arm_mode\": \n  {\n    \"mode\": \"disarm\"\n  }\n}"
+          - if:
+              - condition: template
+                value_template: "{{ keypad2_enabled }}"
+            then:
+              - action: mqtt.publish
+                data:
+                  topic: !input z2m_keypad_path_set2
+                  payload: "{\n \"arm_mode\": \n  {\n    \"mode\": \"disarm\"\n  }\n}"
           - choose:
             default: !input action_disarmed
       - conditions:
@@ -256,6 +302,14 @@ actions:
             data:
               topic: !input z2m_keypad_path_set
               payload: "{\n \"arm_mode\": \n  {\n   \"mode\": \"arm_day_zones\"\n  }\n}"
+          - if:
+              - condition: template
+                value_template: "{{ keypad2_enabled }}"
+            then:
+              - action: mqtt.publish
+                data:
+                  topic: !input z2m_keypad_path_set2
+                  payload: "{\n \"arm_mode\": \n  {\n   \"mode\": \"arm_day_zones\"\n  }\n}"
           - choose:
             default: !input action_armed_home
       - conditions:
@@ -266,6 +320,14 @@ actions:
             data:
               topic: !input z2m_keypad_path_set
               payload: "{\n \"arm_mode\": \n  {\n   \"mode\": \"arm_night_zones\"\n  }\n}"
+          - if:
+              - condition: template
+                value_template: "{{ keypad2_enabled }}"
+            then:
+              - action: mqtt.publish
+                data:
+                  topic: !input z2m_keypad_path_set2
+                  payload: "{\n \"arm_mode\": \n  {\n   \"mode\": \"arm_night_zones\"\n  }\n}"
           - choose:
             default: !input action_armed_night
       - conditions:
@@ -276,6 +338,14 @@ actions:
             data:
               topic: !input z2m_keypad_path_set
               payload: "{\n \"arm_mode\": \n  {\n   \"mode\": \"entry_delay\"\n  }\n}"
+          - if:
+              - condition: template
+                value_template: "{{ keypad2_enabled }}"
+            then:
+              - action: mqtt.publish
+                data:
+                  topic: !input z2m_keypad_path_set2
+                  payload: "{\n \"arm_mode\": \n  {\n   \"mode\": \"entry_delay\"\n  }\n}"
           - choose:
             default: !input action_pending
       - conditions:
@@ -286,11 +356,19 @@ actions:
             data:
               topic: !input z2m_keypad_path_set
               payload: "{\n \"arm_mode\": \n  {\n   \"mode\": \"in_alarm\"\n  }\n}"
+          - if:
+              - condition: template
+                value_template: "{{ keypad2_enabled }}"
+            then:
+              - action: mqtt.publish
+                data:
+                  topic: !input z2m_keypad_path_set2
+                  payload: "{\n \"arm_mode\": \n  {\n   \"mode\": \"in_alarm\"\n  }\n}"
           - choose:
             default: !input action_alarm
       - conditions:
-          - condition: trigger
-            id: keypad_mqtt
+          - condition: template
+            value_template: "{{ trigger.id in ['keypad_mqtt', 'keypad_mqtt_2'] }}"
         sequence:
           - choose:
               - conditions:
@@ -359,12 +437,24 @@ actions:
                       trigger.payload_json.action_code | int(-1) != -1 and
                       not (allow_arm_without_code and (trigger.payload_json.action_code | default('') | string | length == 0)) }}"
                 sequence:
-                  - action: mqtt.publish
-                    data:
-                      topic: !input z2m_keypad_path_set
-                      payload:
-                        "{\n \"arm_mode\": \n  {\n   \"transaction\": \"{{ trigger.payload_json.action_transaction
-                        }}\",\n   \"mode\": \"invalid_code\"\n  }\n}"
+                  - choose:
+                      - conditions:
+                          - condition: template
+                            value_template: "{{ trigger.id == 'keypad_mqtt_2' }}"
+                        sequence:
+                          - action: mqtt.publish
+                            data:
+                              topic: !input z2m_keypad_path_set2
+                              payload:
+                                "{\n \"arm_mode\": \n  {\n   \"transaction\": \"{{ trigger.payload_json.action_transaction
+                                }}\",\n   \"mode\": \"invalid_code\"\n  }\n}"
+                    default:
+                      - action: mqtt.publish
+                        data:
+                          topic: !input z2m_keypad_path_set
+                          payload:
+                            "{\n \"arm_mode\": \n  {\n   \"transaction\": \"{{ trigger.payload_json.action_transaction
+                            }}\",\n   \"mode\": \"invalid_code\"\n  }\n}"
             default: []
     default: []
 mode: parallel
